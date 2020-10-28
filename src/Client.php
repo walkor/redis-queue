@@ -113,30 +113,32 @@ class Client
     /**
      * Subscribe.
      *
-     * @param $queue
+     * @param string|array $queue
      * @param callable $callback
      */
     public function subscribe($queue, callable $callback)
     {
-        $redis_key = static::QUEUE_WAITING . $queue;
-        $this->_subscribeQueues[$redis_key] = $callback;
+        $queue = (array)$queue;
+        foreach ($queue as $q) {
+            $redis_key = static::QUEUE_WAITING . $q;
+            $this->_subscribeQueues[$redis_key] = $callback;
+        }
         $this->pull();
     }
 
     /**
      * Unsubscribe.
      *
-     * @param $queue
-     * @return bool
+     * @param string|array $queue
+     * @return void
      */
     public function unsubscribe($queue)
     {
-        $redis_key = static::QUEUE_WAITING . $queue;
-        if (!isset($this->_subscribeQueues[$redis_key])) {
-            return false;
+        $queue = (array)$queue;
+        foreach($queue as $q) {
+            $redis_key = static::QUEUE_WAITING . $q;
+            unset($this->_subscribeQueues[$redis_key]);
         }
-        unset($this->_subscribeQueues[$redis_key]);
-        return true;
     }
 
     /**
