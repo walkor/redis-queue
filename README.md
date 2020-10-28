@@ -70,7 +70,7 @@ Send a message to a queue
 
 * `$queue` is the queue to publish to, `String`
 * `$data` is the message to publish, `Mixed`
-* `$dely` is delay time of delayed consumption, `Int`
+* `$dely` is delay seconds for delayed consumption, `Int`
   
 -------------------------------------------------------
 
