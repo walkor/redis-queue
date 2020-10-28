@@ -53,7 +53,7 @@ Run with command `php test.php start` or `php test.php start -d`.
 
 Create an instance by $address and $options.
 
-  * `$address`  for example'redis://ip:6379'. 
+  * `$address`  for example `redis://ip:6379`. 
 
   * `$options` is the client connection options. Defaults:
     * `auth`: default ''
