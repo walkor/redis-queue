@@ -57,7 +57,6 @@ Create an instance by $address and $options.
 
   * `$options` is the client connection options. Defaults:
     * `auth`: default ''
-    * `client_id`: client id, default `workerman-mqtt-client-{$mt_rand}`
     * `db`: default 0
     * `retry_seconds`: Retry interval after consumption failure
     * `max_attempts`: Maximum number of retries after consumption failure
