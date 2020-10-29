@@ -35,7 +35,7 @@ class Client
     /**
      * Queue with consumption failure
      */
-    const QUEUE_FAILD = 'redis-queue-faild';
+    const QUEUE_FAILD = 'redis-queue-failed';
 
     /**
      * @var Redis
