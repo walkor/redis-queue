@@ -85,7 +85,7 @@ Subscribe to a queue or queues
 <a name="unsubscribe"></a>
 ### unsubscribe(mixed $queue)
 
-Unsubscribe from a topic or topics
+Unsubscribe from a queue or queues
 
 * `$queue` is a `String` queue or an array of queue to unsubscribe from
 
