@@ -37,9 +37,7 @@ Worker::runAll();
 
 Run with command `php test.php start` or `php test.php start -d`.
 
-# Api
-
-## API
+# API
 
   * <a href="#construct"><code>Client::<b>__construct()</b></code></a>
   * <a href="#send"><code>Client::<b>send()</b></code></a>
