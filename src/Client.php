@@ -155,7 +155,10 @@ class Client
             $options = ['LIMIT', 0, 128];
             $this->_redisSend->zrevrangebyscore(static::QUEUE_DELAYED, $now, '-inf', $options, function($items){
                 foreach ($items as $package_str) {
-                    $this->_redisSend->zRem(static::QUEUE_DELAYED, $package_str, function () use ($package_str) {
+                    $this->_redisSend->zRem(static::QUEUE_DELAYED, $package_str, function ($result) use ($package_str) {
+                        if ($result !== 1) {
+                            return;
+                        }
                         $package = \json_decode($package_str, true);
                         if (!$package) {
                             $this->_redisSend->lPush(static::QUEUE_FAILD , $package_str);
@@ -234,7 +237,6 @@ class Client
      */
     protected function fail($package)
     {
-        echo "fail\n";
         $this->_redisSend->lPush(static::QUEUE_FAILD , \json_encode($package));
     }
 
