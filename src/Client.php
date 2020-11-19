@@ -13,6 +13,7 @@
  */
 namespace Workerman\RedisQueue;
 
+use RuntimeException;
 use Workerman\Lib\Timer;
 use Workerman\Redis\Client as Redis;
 
@@ -89,8 +90,9 @@ class Client
      * @param $queue
      * @param $data
      * @param int $delay
+     * @param callable $cb
      */
-    public function send($queue, $data, $delay = 0)
+    public function send($queue, $data, $delay = 0, $cb = null)
     {
         static $_id = 0;
         $id = \microtime(true) . '.' . (++$_id);
@@ -103,10 +105,19 @@ class Client
             'queue'    => $queue,
             'data'     => $data
         ]);
+        if (\is_callable($delay)) {
+            $cb = $delay;
+            $delay = 0;
+        }
+        if ($cb) {
+            $cb = function ($ret) use ($cb) {
+               $cb((bool)$ret);
+            };
+        }
         if ($delay == 0) {
-            $this->_redisSend->lPush(static::QUEUE_WAITING . $queue, $package_str);
+            $this->_redisSend->lPush(static::QUEUE_WAITING . $queue, $package_str, $cb);
         } else {
-            $this->_redisSend->zAdd(static::QUEUE_DELAYED, $now + $delay, $package_str);
+            $this->_redisSend->zAdd(static::QUEUE_DELAYED, $now + $delay, $package_str, $cb);
         }
     }
 
@@ -154,6 +165,9 @@ class Client
             $now = time();
             $options = ['LIMIT', 0, 128];
             $this->_redisSend->zrevrangebyscore(static::QUEUE_DELAYED, $now, '-inf', $options, function($items){
+                if ($items === false) {
+                    throw new RuntimeException($this->_redisSend->error());
+                }
                 foreach ($items as $package_str) {
                     $this->_redisSend->zRem(static::QUEUE_DELAYED, $package_str, function ($result) use ($package_str) {
                         if ($result !== 1) {
