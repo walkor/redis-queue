@@ -113,11 +113,17 @@ class Client
             $cb = function ($ret) use ($cb) {
                $cb((bool)$ret);
             };
+            if ($delay == 0) {
+                $this->_redisSend->lPush(static::QUEUE_WAITING . $queue, $package_str, $cb);
+            } else {
+                $this->_redisSend->zAdd(static::QUEUE_DELAYED, $now + $delay, $package_str, $cb);
+            }
+            return;
         }
         if ($delay == 0) {
-            $this->_redisSend->lPush(static::QUEUE_WAITING . $queue, $package_str, $cb);
+            $this->_redisSend->lPush(static::QUEUE_WAITING . $queue, $package_str);
         } else {
-            $this->_redisSend->zAdd(static::QUEUE_DELAYED, $now + $delay, $package_str, $cb);
+            $this->_redisSend->zAdd(static::QUEUE_DELAYED, $now + $delay, $package_str);
         }
     }
 
