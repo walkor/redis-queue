@@ -26,17 +26,17 @@ class Client
     /**
      * Queue waiting for consumption
      */
-    const QUEUE_WAITING = 'redis-queue-waiting';
+    const QUEUE_WAITING = '{redis-queue}-waiting';
 
     /**
      * Queue with delayed consumption
      */
-    const QUEUE_DELAYED = 'redis-queue-delayed';
+    const QUEUE_DELAYED = '{redis-queue}-delayed';
 
     /**
      * Queue with consumption failure
      */
-    const QUEUE_FAILD = 'redis-queue-failed';
+    const QUEUE_FAILD = '{redis-queue}-failed';
 
     /**
      * @var Redis
