@@ -169,7 +169,7 @@ class Client
         }
         $retry_timer = Timer::add(1, function () {
             $now = time();
-            $options = ['LIMIT', 0, 128];
+            $options = ['LIMIT', 0, 1];
             $this->_redisSend->zrevrangebyscore(static::QUEUE_DELAYED, $now, '-inf', $options, function($items){
                 if ($items === false) {
                     throw new RuntimeException($this->_redisSend->error());
