@@ -223,6 +223,7 @@ class Client
                             } else {
                                 $this->retry($package);
                             }
+                            echo $e;
                         } catch (\Error $e) {
                             if (++$package['attempts'] > $this->_options['max_attempts']) {
                                 $package['error'] = (string) $e;
@@ -230,6 +231,7 @@ class Client
                             } else {
                                 $this->retry($package);
                             }
+                            echo $e;
                         }
                     }
                 }
