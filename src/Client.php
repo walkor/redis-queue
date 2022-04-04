@@ -14,7 +14,7 @@
 namespace Workerman\RedisQueue;
 
 use RuntimeException;
-use Workerman\Lib\Timer;
+use Workerman\Timer;
 use Workerman\Redis\Client as Redis;
 
 /**
