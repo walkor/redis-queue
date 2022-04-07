@@ -73,7 +73,7 @@ class Client
         $this->_redisSubscribe = new Redis($address, $options);
         $this->_redisSubscribe->brPoping = 0;
         $this->_redisSend = new Redis($address, $options);
-        if (isset($options['auth'])) {
+        if (isset($options['auth']) && $options['auth'] !== '') {
             $this->_redisSubscribe->auth($options['auth']);
             $this->_redisSend->auth($options['auth']);
         }
