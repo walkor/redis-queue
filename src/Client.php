@@ -11,6 +11,7 @@
  * @link      http://www.workerman.net/
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
+
 namespace Workerman\RedisQueue;
 
 use RuntimeException;
@@ -36,7 +37,7 @@ class Client
     /**
      * Queue with consumption failure
      */
-    const QUEUE_FAILD = '{redis-queue}-failed';
+    const QUEUE_FAILED = '{redis-queue}-failed';
 
     /**
      * @var Redis
@@ -111,7 +112,7 @@ class Client
         }
         if ($cb) {
             $cb = function ($ret) use ($cb) {
-               $cb((bool)$ret);
+                $cb((bool)$ret);
             };
             if ($delay == 0) {
                 $this->_redisSend->lPush(static::QUEUE_WAITING . $queue, $package_str, $cb);
@@ -152,7 +153,7 @@ class Client
     public function unsubscribe($queue)
     {
         $queue = (array)$queue;
-        foreach($queue as $q) {
+        foreach ($queue as $q) {
             $redis_key = static::QUEUE_WAITING . $q;
             unset($this->_subscribeQueues[$redis_key]);
         }
@@ -170,7 +171,7 @@ class Client
         $retry_timer = Timer::add(1, function () {
             $now = time();
             $options = ['LIMIT', 0, 128];
-            $this->_redisSend->zrevrangebyscore(static::QUEUE_DELAYED, $now, '-inf', $options, function($items){
+            $this->_redisSend->zrevrangebyscore(static::QUEUE_DELAYED, $now, '-inf', $options, function ($items) {
                 if ($items === false) {
                     throw new RuntimeException($this->_redisSend->error());
                 }
@@ -181,7 +182,7 @@ class Client
                         }
                         $package = \json_decode($package_str, true);
                         if (!$package) {
-                            $this->_redisSend->lPush(static::QUEUE_FAILD , $package_str);
+                            $this->_redisSend->lPush(static::QUEUE_FAILED, $package_str);
                             return;
                         }
                         $this->_redisSend->lPush(static::QUEUE_WAITING . $package['queue'], $package_str);
@@ -200,14 +201,14 @@ class Client
         if (!$this->_subscribeQueues || $this->_redisSubscribe->brPoping) {
             return;
         }
-        $cb = function($data) use (&$cb) {
+        $cb = function ($data) use (&$cb) {
             if ($data) {
                 $this->_redisSubscribe->brPoping = 0;
                 $redis_key = $data[0];
                 $package_str = $data[1];
                 $package = json_decode($package_str, true);
                 if (!$package) {
-                    $this->_redisSend->lPush(static::QUEUE_FAILD, $package_str);
+                    $this->_redisSend->lPush(static::QUEUE_FAILED, $package_str);
                 } else {
                     if (!isset($this->_subscribeQueues[$redis_key])) {
                         // 取消订阅，放回队列
@@ -238,7 +239,7 @@ class Client
             }
             if ($this->_subscribeQueues) {
                 $this->_redisSubscribe->brPoping = 1;
-                Timer::add(0.000001, [$this->_redisSubscribe, 'brPop'], [\array_keys($this->_subscribeQueues), 1, $cb] ,false);
+                Timer::add(0.000001, [$this->_redisSubscribe, 'brPop'], [\array_keys($this->_subscribeQueues), 1, $cb], false);
             }
         };
         $this->_redisSubscribe->brPoping = 1;
@@ -259,7 +260,6 @@ class Client
      */
     protected function fail($package)
     {
-        $this->_redisSend->lPush(static::QUEUE_FAILD , \json_encode($package));
+        $this->_redisSend->lPush(static::QUEUE_FAILED, \json_encode($package));
     }
-
 }
