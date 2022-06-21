@@ -62,6 +62,7 @@ class Client
         'max_attempts'  => 5,
         'auth'          => '',
         'db'            => 0,
+        'prefix'        => '',
     ];
 
     /**
@@ -115,16 +116,16 @@ class Client
                 $cb((bool)$ret);
             };
             if ($delay == 0) {
-                $this->_redisSend->lPush(static::QUEUE_WAITING . $queue, $package_str, $cb);
+                $this->_redisSend->lPush($this->_options['prefix'] . static::QUEUE_WAITING . $queue, $package_str, $cb);
             } else {
-                $this->_redisSend->zAdd(static::QUEUE_DELAYED, $now + $delay, $package_str, $cb);
+                $this->_redisSend->zAdd($this->_options['prefix'] . static::QUEUE_DELAYED, $now + $delay, $package_str, $cb);
             }
             return;
         }
         if ($delay == 0) {
-            $this->_redisSend->lPush(static::QUEUE_WAITING . $queue, $package_str);
+            $this->_redisSend->lPush($this->_options['prefix'] . static::QUEUE_WAITING . $queue, $package_str);
         } else {
-            $this->_redisSend->zAdd(static::QUEUE_DELAYED, $now + $delay, $package_str);
+            $this->_redisSend->zAdd($this->_options['prefix'] . static::QUEUE_DELAYED, $now + $delay, $package_str);
         }
     }
 
@@ -138,7 +139,7 @@ class Client
     {
         $queue = (array)$queue;
         foreach ($queue as $q) {
-            $redis_key = static::QUEUE_WAITING . $q;
+            $redis_key = $this->_options['prefix'] . static::QUEUE_WAITING . $q;
             $this->_subscribeQueues[$redis_key] = $callback;
         }
         $this->pull();
@@ -154,7 +155,7 @@ class Client
     {
         $queue = (array)$queue;
         foreach ($queue as $q) {
-            $redis_key = static::QUEUE_WAITING . $q;
+            $redis_key = $this->_options['prefix'] . static::QUEUE_WAITING . $q;
             unset($this->_subscribeQueues[$redis_key]);
         }
     }
@@ -171,21 +172,21 @@ class Client
         $retry_timer = Timer::add(1, function () {
             $now = time();
             $options = ['LIMIT', 0, 128];
-            $this->_redisSend->zrevrangebyscore(static::QUEUE_DELAYED, $now, '-inf', $options, function ($items) {
+            $this->_redisSend->zrevrangebyscore($this->_options['prefix'] . static::QUEUE_DELAYED, $now, '-inf', $options, function ($items) {
                 if ($items === false) {
                     throw new RuntimeException($this->_redisSend->error());
                 }
                 foreach ($items as $package_str) {
-                    $this->_redisSend->zRem(static::QUEUE_DELAYED, $package_str, function ($result) use ($package_str) {
+                    $this->_redisSend->zRem($this->_options['prefix'] . static::QUEUE_DELAYED, $package_str, function ($result) use ($package_str) {
                         if ($result !== 1) {
                             return;
                         }
                         $package = \json_decode($package_str, true);
                         if (!$package) {
-                            $this->_redisSend->lPush(static::QUEUE_FAILED, $package_str);
+                            $this->_redisSend->lPush($this->_options['prefix'] . static::QUEUE_FAILED, $package_str);
                             return;
                         }
-                        $this->_redisSend->lPush(static::QUEUE_WAITING . $package['queue'], $package_str);
+                        $this->_redisSend->lPush($this->_options['prefix'] . static::QUEUE_WAITING . $package['queue'], $package_str);
                     });
                 }
             });
@@ -208,7 +209,7 @@ class Client
                 $package_str = $data[1];
                 $package = json_decode($package_str, true);
                 if (!$package) {
-                    $this->_redisSend->lPush(static::QUEUE_FAILED, $package_str);
+                    $this->_redisSend->lPush($this->_options['prefix'] . static::QUEUE_FAILED, $package_str);
                 } else {
                     if (!isset($this->_subscribeQueues[$redis_key])) {
                         // 取消订阅，放回队列
@@ -252,7 +253,7 @@ class Client
     protected function retry($package)
     {
         $delay = time() + $this->_options['retry_seconds'] * ($package['attempts']);
-        $this->_redisSend->zAdd(static::QUEUE_DELAYED, $delay, \json_encode($package));
+        $this->_redisSend->zAdd($this->_options['prefix'] . static::QUEUE_DELAYED, $delay, \json_encode($package));
     }
 
     /**
@@ -260,6 +261,6 @@ class Client
      */
     protected function fail($package)
     {
-        $this->_redisSend->lPush(static::QUEUE_FAILED, \json_encode($package));
+        $this->_redisSend->lPush($this->_options['prefix'] . static::QUEUE_FAILED, \json_encode($package));
     }
 }
