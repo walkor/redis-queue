@@ -12,9 +12,15 @@ $worker->onWorkerStart = function () {
     $client->subscribe('user-1', function($data){
         echo "user-1\n";
         var_export($data);
+    }, function($data){
+        echo "user-1 failed\n";
+        var_export($data);
     });
     $client->subscribe('user-2', function($data){
         echo "user-2\n";
+        var_export($data);
+    }, function($data){
+        echo "user-2 failed\n";
         var_export($data);
     });
     Timer::add(1, function()use($client){

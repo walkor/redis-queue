@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of workerman.
  *
@@ -135,13 +136,14 @@ class Client
      *
      * @param string|array $queue
      * @param callable $callback
+     * @param callable|null $fail_callback
      */
-    public function subscribe($queue, callable $callback)
+    public function subscribe($queue, callable $callback, callable $fail_callback = null)
     {
         $queue = (array)$queue;
         foreach ($queue as $q) {
             $redis_key = $this->_options['prefix'] . static::QUEUE_WAITING . $q;
-            $this->_subscribeQueues[$redis_key] = $callback;
+            $this->_subscribeQueues[$redis_key] = [$callback, $fail_callback];
         }
         $this->pull();
     }
@@ -216,13 +218,20 @@ class Client
                         // 取消订阅，放回队列
                         $this->_redisSend->rPush($redis_key, $package_str);
                     } else {
-                        $callback = $this->_subscribeQueues[$redis_key];
+                        $callback = $this->_subscribeQueues[$redis_key][0];
                         try {
                             \call_user_func($callback, $package['data']);
                         } catch (\Exception $e) {
                             if (++$package['attempts'] > $this->_options['max_attempts']) {
                                 $package['error'] = (string) $e;
                                 $this->fail($package);
+                                if ($this->_subscribeQueues[$redis_key][1]) {
+                                    try {
+                                        \call_user_func($this->_subscribeQueues[$redis_key][1], $package['data']);
+                                    } catch (\Throwable $tb) {
+                                        echo $tb;
+                                    }
+                                }
                             } else {
                                 $this->retry($package);
                             }
@@ -231,6 +240,13 @@ class Client
                             if (++$package['attempts'] > $this->_options['max_attempts']) {
                                 $package['error'] = (string) $e;
                                 $this->fail($package);
+                                if ($this->_subscribeQueues[$redis_key][1]) {
+                                    try {
+                                        \call_user_func($this->_subscribeQueues[$redis_key][1], $package['data']);
+                                    } catch (\Throwable $tb) {
+                                        echo $tb;
+                                    }
+                                }
                             } else {
                                 $this->retry($package);
                             }
