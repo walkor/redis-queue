@@ -22,16 +22,14 @@ $worker->onWorkerStart = function () {
     $client->subscribe('user-1', function($data){
         echo "user-1\n";
         var_export($data);
-    }, function($data){
-        echo "user-1 failed\n";
-        var_export($data);
     });
     $client->subscribe('user-2', function($data){
         echo "user-2\n";
         var_export($data);
-    }, function($data){
-        echo "user-2 failed\n";
-        var_export($data);
+    });
+    $client->onConsumeFailure(function ($package) {
+        echo "consume failure\n";
+        var_export($package);
     });
     Timer::add(1, function()use($client){
         $client->send('user-1', ['some', 'data']);
