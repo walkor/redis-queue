@@ -57,6 +57,11 @@ class Client
     protected $_subscribeQueues = [];
 
     /**
+     * consume failure callback
+     * @var callable
+     */
+    public $consumeFailure = null;
+    /**
      * @var array
      */
     protected $_options = [
@@ -87,7 +92,6 @@ class Client
         }
         $this->_options = array_merge($this->_options, $options);
     }
-
     /**
      * Send.
      *
@@ -132,18 +136,27 @@ class Client
     }
 
     /**
+     * Set the consume failure callback.
+     *
+     * @param callable $callback
+     */
+    public function onConsumeFailure(callable $callback)
+    {
+        $this->consumeFailure = $callback;
+    }
+
+    /**
      * Subscribe.
      *
      * @param string|array $queue
      * @param callable $callback
-     * @param callable|null $fail_callback
      */
-    public function subscribe($queue, callable $callback, callable $fail_callback = null)
+    public function subscribe($queue, callable $callback)
     {
         $queue = (array)$queue;
         foreach ($queue as $q) {
             $redis_key = $this->_options['prefix'] . static::QUEUE_WAITING . $q;
-            $this->_subscribeQueues[$redis_key] = [$callback, $fail_callback];
+            $this->_subscribeQueues[$redis_key] = $callback;
         }
         $this->pull();
     }
@@ -218,37 +231,39 @@ class Client
                         // 取消订阅，放回队列
                         $this->_redisSend->rPush($redis_key, $package_str);
                     } else {
-                        $callback = $this->_subscribeQueues[$redis_key][0];
+                        $callback = $this->_subscribeQueues[$redis_key];
                         try {
                             \call_user_func($callback, $package['data']);
                         } catch (\Exception $e) {
+                            $package['max_attempts'] = $this->_options['max_attempts'];
+                            $package['error'] = (string) $e;
                             if (++$package['attempts'] > $this->_options['max_attempts']) {
-                                $package['error'] = (string) $e;
                                 $this->fail($package);
-                                if ($this->_subscribeQueues[$redis_key][1]) {
-                                    try {
-                                        \call_user_func($this->_subscribeQueues[$redis_key][1], $package['data']);
-                                    } catch (\Throwable $tb) {
-                                        echo $tb;
-                                    }
-                                }
                             } else {
                                 $this->retry($package);
                             }
+                            if ($this->consumeFailure) {
+                                try {
+                                    \call_user_func($this->consumeFailure, $package);
+                                } catch (\Throwable $ta) {
+                                    echo $ta;
+                                }
+                            }
                             echo $e;
                         } catch (\Error $e) {
+                            $package['max_attempts'] = $this->_options['max_attempts'];
+                            $package['error'] = (string) $e;
                             if (++$package['attempts'] > $this->_options['max_attempts']) {
-                                $package['error'] = (string) $e;
                                 $this->fail($package);
-                                if ($this->_subscribeQueues[$redis_key][1]) {
-                                    try {
-                                        \call_user_func($this->_subscribeQueues[$redis_key][1], $package['data']);
-                                    } catch (\Throwable $tb) {
-                                        echo $tb;
-                                    }
-                                }
                             } else {
                                 $this->retry($package);
+                            }
+                            if ($this->consumeFailure) {
+                                try {
+                                    \call_user_func($this->consumeFailure, $package);
+                                } catch (\Throwable $ta) {
+                                    echo $ta;
+                                }
                             }
                             echo $e;
                         }
