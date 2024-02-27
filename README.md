@@ -56,6 +56,7 @@ Create an instance by $address and $options.
   * `$options` is the client connection options. Defaults:
     * `auth`: default ''
     * `db`: default 0
+    * `debug`: default false Whether to save the stack when consumption fails
     * `retry_seconds`: Retry interval after consumption failure
     * `max_attempts`: Maximum number of retries after consumption failure
    

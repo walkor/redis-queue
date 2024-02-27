@@ -64,6 +64,7 @@ class Client
         'auth'          => '',
         'db'            => 0,
         'prefix'        => '',
+        'debug'        => false,
     ];
 
     /**
@@ -221,7 +222,7 @@ class Client
                             \call_user_func($callback, $package['data']);
                         } catch (\Exception $e) {
                             if (++$package['attempts'] > $this->_options['max_attempts']) {
-                                $package['error'] = (string) $e;
+                                $this->_options['debug'] && $package['error'] = (string) $e;
                                 $this->fail($package);
                             } else {
                                 $this->retry($package);
@@ -229,7 +230,7 @@ class Client
                             echo $e;
                         } catch (\Error $e) {
                             if (++$package['attempts'] > $this->_options['max_attempts']) {
-                                $package['error'] = (string) $e;
+                                $this->_options['debug'] && $package['error'] = (string) $e;
                                 $this->fail($package);
                             } else {
                                 $this->retry($package);
