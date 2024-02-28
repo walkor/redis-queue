@@ -19,11 +19,11 @@ use Workerman\RedisQueue\Client;
 $worker = new Worker();
 $worker->onWorkerStart = function () {
     $client = new Client('redis://127.0.0.1:6379');
-    $client->subscribe('user-1', function($data){
+    $client->subscribe('user-1', function($data) {
         echo "user-1\n";
         var_export($data);
     });
-    $client->subscribe('user-2', function($data){
+    $client->subscribe('user-2', function($data) {
         echo "user-2\n";
         var_export($data);
     });
@@ -32,7 +32,7 @@ $worker->onWorkerStart = function () {
         echo $exception->getMessage(), "\n";
         var_export($package);
     });
-    Timer::add(1, function()use($client){
+    Timer::add(1, function() use ($client) {
         $client->send('user-1', ['some', 'data']);
     });
 };
@@ -48,6 +48,7 @@ Run with command `php test.php start` or `php test.php start -d`.
   * <a href="#send"><code>Client::<b>send()</b></code></a>
   * <a href="#subscribe"><code>Client::<b>subscribe()</b></code></a>
   * <a href="#unsubscribe"><code>Client::<b>unsubscribe()</b></code></a>
+  * <a href="#unsubscribe"><code>Client::<b>onConsumeFailure()</b></code></a>
 
 -------------------------------------------------------
 
@@ -92,6 +93,13 @@ Subscribe to a queue or queues
 
 Unsubscribe from a queue or queues
 
-* `$queue` is a `String` queue or an array of queue to unsubscribe from
+-------------------------------------------------------
+
+<a name="onConsumeFailure"></a>
+### onConsumeFailure(callable $callback)
+
+When consumption fails onConsumeFailure is triggered.
+
+* `$callback` - `function (\Throwable $exception, array $package)`, `$package` contains information such as data queue attempts 
 
 -------------------------------------------------------
