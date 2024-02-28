@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of workerman.
  *
@@ -56,6 +57,11 @@ class Client
     protected $_subscribeQueues = [];
 
     /**
+     * consume failure callback
+     * @var callable
+     */
+    public $consumeFailure = null;
+    /**
      * @var array
      */
     protected $_options = [
@@ -86,7 +92,6 @@ class Client
         }
         $this->_options = array_merge($this->_options, $options);
     }
-
     /**
      * Send.
      *
@@ -128,6 +133,16 @@ class Client
         } else {
             $this->_redisSend->zAdd($this->_options['prefix'] . static::QUEUE_DELAYED, $now + $delay, $package_str);
         }
+    }
+
+    /**
+     * Set the consume failure callback.
+     *
+     * @param callable $callback
+     */
+    public function onConsumeFailure(callable $callback)
+    {
+        $this->consumeFailure = $callback;
     }
 
     /**
@@ -220,19 +235,35 @@ class Client
                         try {
                             \call_user_func($callback, $package['data']);
                         } catch (\Exception $e) {
+                            $package['max_attempts'] = $this->_options['max_attempts'];
+                            $package['error'] = (string) $e;
                             if (++$package['attempts'] > $this->_options['max_attempts']) {
-                                $package['error'] = (string) $e;
                                 $this->fail($package);
                             } else {
                                 $this->retry($package);
                             }
+                            if ($this->consumeFailure) {
+                                try {
+                                    \call_user_func($this->consumeFailure, $package);
+                                } catch (\Throwable $ta) {
+                                    echo $ta;
+                                }
+                            }
                             echo $e;
                         } catch (\Error $e) {
+                            $package['max_attempts'] = $this->_options['max_attempts'];
+                            $package['error'] = (string) $e;
                             if (++$package['attempts'] > $this->_options['max_attempts']) {
-                                $package['error'] = (string) $e;
                                 $this->fail($package);
                             } else {
                                 $this->retry($package);
+                            }
+                            if ($this->consumeFailure) {
+                                try {
+                                    \call_user_func($this->consumeFailure, $package);
+                                } catch (\Throwable $ta) {
+                                    echo $ta;
+                                }
                             }
                             echo $e;
                         }
