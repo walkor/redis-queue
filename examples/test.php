@@ -23,9 +23,8 @@ $worker->onWorkerStart = function () {
         echo "user-2 failed\n";
         var_export($data);
     });
-    $client->onConsumeFailure(function ($exception, $package) {
+    $client->onConsumeFailure(function ($package) {
         echo "consume failure\n";
-        var_export($exception);
         var_export($package);
     });
     Timer::add(1, function () use ($client) {
