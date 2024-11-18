@@ -241,6 +241,11 @@ class Client
                         $callback = $this->_subscribeQueues[$redis_key];
                         try {
                             \call_user_func($callback, $package['data']);
+                        } catch (UnretryableException $e) {
+                            $this->log((string)$e);
+                            $package['max_attempts'] = $this->_options['max_attempts'];
+                            $package['error'] = $e->getMessage();
+                            $this->fail($package);
                         } catch (\Throwable $e) {
                             $this->log((string)$e);
                             $package['max_attempts'] = $this->_options['max_attempts'];
