@@ -30,17 +30,17 @@ class Client
     /**
      * Queue waiting for consumption
      */
-    const QUEUE_WAITING = '{redis-queue}-waiting';
+    const QUEUE_WAITING = 'waiting';
 
     /**
      * Queue with delayed consumption
      */
-    const QUEUE_DELAYED = '{redis-queue}-delayed';
+    const QUEUE_DELAYED = 'delayed';
 
     /**
      * Queue with consumption failure
      */
-    const QUEUE_FAILED = '{redis-queue}-failed';
+    const QUEUE_FAILED = 'failed';
 
     /**
      * @var Redis
@@ -76,6 +76,7 @@ class Client
         'auth'          => '',
         'db'            => 0,
         'prefix'        => '',
+        'queue_name'    => 'redis-queue',
     ];
 
     /**
@@ -162,7 +163,7 @@ class Client
     {
         $queue = (array)$queue;
         foreach ($queue as $q) {
-            $redis_key = $this->_options['prefix'] . static::QUEUE_WAITING . $q;
+            $redis_key = self::getQueueName($q);
             $this->_subscribeQueues[$redis_key] = $callback;
         }
         $this->pull();
@@ -195,21 +196,21 @@ class Client
         $retry_timer = Timer::add(1, function () {
             $now = time();
             $options = ['LIMIT', 0, 128];
-            $this->_redisSend->zrevrangebyscore($this->_options['prefix'] . static::QUEUE_DELAYED, $now, '-inf', $options, function ($items) {
+            $this->_redisSend->zrevrangebyscore(self::getQueueName(null, static::QUEUE_DELAYED), $now, '-inf', $options, function ($items) {
                 if ($items === false) {
                     throw new RuntimeException($this->_redisSend->error());
                 }
                 foreach ($items as $package_str) {
-                    $this->_redisSend->zRem($this->_options['prefix'] . static::QUEUE_DELAYED, $package_str, function ($result) use ($package_str) {
+                    $this->_redisSend->zRem(self::getQueueName(null, static::QUEUE_DELAYED), $package_str, function ($result) use ($package_str) {
                         if ($result !== 1) {
                             return;
                         }
                         $package = \json_decode($package_str, true);
                         if (!$package) {
-                            $this->_redisSend->lPush($this->_options['prefix'] . static::QUEUE_FAILED, $package_str);
+                            $this->_redisSend->lPush(self::getQueueName(null, static::QUEUE_FAILED), $package_str);
                             return;
                         }
-                        $this->_redisSend->lPush($this->_options['prefix'] . static::QUEUE_WAITING . $package['queue'], $package_str);
+                        $this->_redisSend->lPush(self::getQueueName($package['queue']), $package_str);
                     });
                 }
             });
@@ -288,7 +289,7 @@ class Client
     protected function retry($package)
     {
         $delay = time() + $this->_options['retry_seconds'] * ($package['attempts']);
-        $this->_redisSend->zAdd($this->_options['prefix'] . static::QUEUE_DELAYED, $delay, \json_encode($package, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        $this->_redisSend->zAdd(self::getQueueName(null, static::QUEUE_DELAYED), $delay, \json_encode($package, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
     /**
@@ -296,7 +297,7 @@ class Client
      */
     protected function fail($package)
     {
-        $this->_redisSend->lPush($this->_options['prefix'] . static::QUEUE_FAILED, \json_encode($package, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        $this->_redisSend->lPush(self::getQueueName(null, static::QUEUE_FAILED), \json_encode($package, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
     /**
@@ -322,5 +323,25 @@ class Client
             $this->_logger = $logger;
         }
         return $this->_logger;
+    }
+
+    /**
+     * Get the full queue name based on the queue and status.
+     *
+     * @param string|null $queue
+     * @param string $status
+     * @return string
+     */
+    public static function getQueueName(?string $queue = null, string $status = self::QUEUE_WAITING): string
+    {
+        $name = [
+            $this->_options['prefix'] . '{' . $this->_options['queue_name'] . '}',
+            $status,
+        ];
+        if ($queue) {
+            $name[] = $queue;
+        }
+
+        return implode(':', $name);
     }
 }
