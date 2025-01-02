@@ -13,7 +13,7 @@ test.php
 require __DIR__ . '/vendor/autoload.php';
 
 use Workerman\Worker;
-use Workerman\Lib\Timer;
+use Workerman\Timer;
 use Workerman\RedisQueue\Client;
 
 $worker = new Worker();
