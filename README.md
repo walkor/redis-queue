@@ -72,13 +72,13 @@ Create an instance by $address and $options.
 -------------------------------------------------------
 
 <a name="send"></a>
-### send(String $queue, Mixed $data, [int $dely=0])
+### send(String $queue, Mixed $data, [int $delay=0])
 
 Send a message to a queue
 
 * `$queue` is the queue to publish to, `String`
 * `$data` is the message to publish, `Mixed`
-* `$dely` is delay seconds for delayed consumption, `Int`
+* `$delay` is delay seconds for delayed consumption, `Int`
   
 -------------------------------------------------------
 
